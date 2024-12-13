@@ -9,7 +9,7 @@ export class MainView extends Phaser.GameObjects.Container {
     #overlap
     #isLost
     #score
-    #scoreText
+    
     constructor(scene) {
         super(scene);
         this.#build();
@@ -83,14 +83,47 @@ export class MainView extends Phaser.GameObjects.Container {
     }
 
     #addOverLap(){
-        const allPipes = this.#pipes.map((p) => p.getPipes()).flat()
-        this.#overlap?.destroy();
-        this.#overlap = this.scene.physics.add.overlap(this.#bird, allPipes, this.#gameOver, this);
+        // const allPipes = this.#pipes.map((p) => p.getPipes()).flat()
+        // this.#overlap?.destroy();
+        // this.#overlap = this.scene.physics.add.overlap(this.#bird, allPipes, this.#gameOver, this);
+
+        const allPipes = this.#pipes.map((p) => p.getPipes()).flat();
+        if (this.#overlap) {
+            this.#overlap.destroy(); 
+        }
+        this.#overlap = this.scene.physics.add.overlap(this.#bird, allPipes, this.#gameOver.bind(this));
     }
 
     #gameOver(){
+        if (this.#isLost) return;
+
         this.#bkg.disableInteractive();
         this.#isLost = true;
+        console.log("Game Over");
+
+        const highScore = Math.max(this.#score, sessionStorage.getItem('highScore') || 0);
+        sessionStorage.setItem('highScore', highScore);
+        const { width, height } = this.scene.scale;
+        const popup = this.scene.add.container(width / 2, height / 2);
+
+        const bg = this.scene.add.rectangle(0, 0, 250, 150, 0xf8fb3e, 0.9);
+        const gameOverTxt = this.scene.add.text(0, -30, 'Game Over', { fontSize: '30px', color: '#000', fontFamily: 'Play, Arial'}).setOrigin(0.5).setPosition(0, -40);
+        const scoreTxt = this.scene.add.text(0, 0, `Score: ${this.#score}\nHigh Score: ${highScore}`, {
+            fontSize: '16px',
+            color: '#000',
+            align: 'center',
+            fontFamily: 'Inter'
+        }).setOrigin(0.5);
+
+        const restartButton = this.scene.add.text(0, 40, 'Restart', { fontSize: '16px', color: '#000', fontFamily: 'Inter' })
+            .setOrigin(0.5)
+            .setInteractive()
+            .on('pointerdown', () => {
+                popup.destroy();
+                this.scene.scene.restart();
+            });
+
+        popup.add([bg, gameOverTxt, scoreTxt, restartButton]);
     }
     #onBkgClick(){
         this.#bird.body.velocity.y = Game_Config.birdVelocity;
